@@ -5,21 +5,14 @@ import static org.junit.Assert.*;
 import org.junit.Test;
 
 
-public class TestKThread extends TestHarness {
-	@Test
+public class TestKThread {
 	public void testJoin() {
-		enqueueJob(new Runnable() {
-			@Override
-			public void run() {
-				KThread printA = new KThread(new PrintChar(str , 'A')).setName("forked thread");
-				printA.fork();
-				printA.join();
-				new PrintChar(str , 'B').run();
-				System.out.println("=== test task 1: join ===");
-				System.out.println(str);
-				assertTrue(str.toString().equals("AAAAABBBBB"));
-			}
-		});	
+		KThread printA = new KThread(new PrintChar(str , 'A')).setName("forked thread");
+		printA.fork();
+		printA.join();
+		new PrintChar(str , 'B').run();
+		System.out.println("=== test task 1: join ===");
+		System.out.println(str);
 	}
 	
 	private class PrintChar implements Runnable {

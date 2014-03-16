@@ -3,6 +3,7 @@
 package nachos.threads;
 
 import nachos.machine.*;
+import nachos.test.unittest.*;
 
 /**
  * A multi-threaded OS kernel.
@@ -48,12 +49,20 @@ public class ThreadedKernel extends Kernel {
      * tests here.
      */
     public void selfTest() {
-	KThread.selfTest();
-	Semaphore.selfTest();
-	SynchList.selfTest();
-	if (Machine.bank() != null) {
-	    ElevatorBank.selfTest();
-	}
+    	//KThread.selfTest();
+    	Semaphore.selfTest();
+    	SynchList.selfTest();
+	
+    	//TestKThread test1 = new TestKThread();
+    	//test1.testJoin();
+    	//TestCondition2 test2 = new TestCondition2();
+    	//test2.testCondition2();
+    	TestAlarm test3 = new TestAlarm();
+    	test3.testAlarm();
+    	
+    	if (Machine.bank() != null) {
+    		ElevatorBank.selfTest();
+    	}
     }
 
     /**

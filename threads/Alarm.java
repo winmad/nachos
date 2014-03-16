@@ -32,7 +32,8 @@ public class Alarm {
      */
     public void timerInterrupt() {
     	WaitingType w = waitingQueue.peek();
-    	while (w != null && w.wakeupTime >= Machine.timer().getTime()) {
+
+    	while (w != null && Machine.timer().getTime() >= w.wakeupTime) {
     		Semaphore sem = w.sem;
     			
     		lock.acquire();

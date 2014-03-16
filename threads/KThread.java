@@ -2,6 +2,7 @@
 //PART OF THE NACHOS. DON'T CHANGE CODE OF THIS LINE
 package nachos.threads;
 
+import static org.junit.Assert.assertTrue;
 import nachos.machine.*;
 
 /**
@@ -410,12 +411,43 @@ public class KThread {
      * Tests whether this module is working.
      */
     public static void selfTest() {
-	Lib.debug(dbgThread, "Enter KThread.selfTest");
+    	Lib.debug(dbgThread, "Enter KThread.selfTest");
 
-	//new KThread(new PingTest(1)).setName("forked thread").fork();
-	//new PingTest(0).run();
+    	new KThread(new PingTest(1)).setName("forked thread").fork();
+    	new PingTest(0).run();
     }
-
+    
+    /** test for task 1: join */
+    public static class PrintChar implements Runnable {
+		PrintChar(StringBuffer str , char ch) {
+			this.str = str;
+			this.ch = ch;
+		}
+		
+		@Override
+		public void run() {
+			for (int i = 0; i < 5; i++) {
+				str.append(ch);
+				KThread.yield();
+			}
+		}
+		
+		private StringBuffer str;
+		private char ch;
+	}
+    
+    public static void testJoin() {
+    	StringBuffer str = new StringBuffer("");
+    	
+    	KThread printA = new KThread(new PrintChar(str , 'A')).setName("forked thread");
+		printA.fork();
+		printA.join();
+		new PrintChar(str , 'B').run();
+		System.out.println("=== test task 1: join ===");
+		System.out.println(str);
+    }
+    /** end of test */
+    
     private static final char dbgThread = 't';
 
     /**

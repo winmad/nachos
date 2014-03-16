@@ -2,6 +2,10 @@
 //PART OF THE NACHOS. DON'T CHANGE CODE OF THIS LINE
 package nachos.threads;
 
+import java.util.LinkedList;
+
+import org.junit.Test;
+
 import nachos.machine.*;
 
 /**
