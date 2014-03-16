@@ -158,9 +158,12 @@ public class KThread {
     }
 
     private void runThread() {
-	begin();
-	target.run();
-	finish();
+    	begin();
+    	target.run();
+    	
+    	joinSemaphore.V();
+    	
+    	finish();
     }
 
     private void begin() {
@@ -275,10 +278,14 @@ public class KThread {
      * thread.
      */
     public void join() {
-	Lib.debug(dbgThread, "Joining to thread: " + toString());
+    	Lib.debug(dbgThread, "Joining to thread: " + toString());
 
-	Lib.assertTrue(this != currentThread);
-
+    	Lib.assertTrue(this != currentThread);
+    	
+    	joinSemaphore.P();
+    	
+    	/** To make sure second call doesn't work */
+    	joinSemaphore.V();
     }
 
     /**
@@ -405,8 +412,8 @@ public class KThread {
     public static void selfTest() {
 	Lib.debug(dbgThread, "Enter KThread.selfTest");
 
-	new KThread(new PingTest(1)).setName("forked thread").fork();
-	new PingTest(0).run();
+	//new KThread(new PingTest(1)).setName("forked thread").fork();
+	//new PingTest(0).run();
     }
 
     private static final char dbgThread = 't';
@@ -434,6 +441,9 @@ public class KThread {
     private Runnable target;
     private TCB tcb;
 
+    /** A new semaphore for JOIN operation */
+    private Semaphore joinSemaphore = new Semaphore(0);
+    
     /**
      * Unique identifer for this thread. Used to deterministically compare
      * threads.
