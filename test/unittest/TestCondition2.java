@@ -8,6 +8,32 @@ import org.junit.Test;
 
 
 public class TestCondition2 extends TestHarness {
+	@Test
+	public void testCondition2() {
+		enqueueJob(new Runnable() {
+			@Override
+			public void run() {
+				System.out.println("=== test task 2: condition2 ===");
+				LinkedList<KThread> producers = new LinkedList<KThread>();
+				LinkedList<KThread> consumers = new LinkedList<KThread>();
+				
+				for (int i = 0; i < producerNum; i++) {
+					producers.add(new KThread(new Producer()).setName("Produer #" + i));
+					producers.get(i).fork();
+				}
+				for (int i = 0; i < consumerNum; i++) {
+					consumers.add(new KThread(new Consumer()).setName("Consumer #" + i));
+					consumers.get(i).fork();
+				}
+				
+				for (int i = 0; i < producerNum; i++)
+					producers.get(i).join();
+				for (int i = 0; i < consumerNum; i++)
+					consumers.get(i).join();
+			}
+		});
+	}
+	
 	private class Producer implements Runnable {
 		@Override
 		public void run() {
@@ -46,32 +72,6 @@ public class TestCondition2 extends TestHarness {
 			
 			lock.release();
 		}
-	}
-	
-	@Test
-	public void testCondition2() {
-		enqueueJob(new Runnable() {
-			@Override
-			public void run() {
-				System.out.println("=== test task 2: condition2 ===");
-				LinkedList<KThread> producers = new LinkedList<KThread>();
-				LinkedList<KThread> consumers = new LinkedList<KThread>();
-				
-				for (int i = 0; i < producerNum; i++) {
-					producers.add(new KThread(new Producer()).setName("Produer #" + i));
-					producers.get(i).fork();
-				}
-				for (int i = 0; i < consumerNum; i++) {
-					consumers.add(new KThread(new Consumer()).setName("Consumer #" + i));
-					consumers.get(i).fork();
-				}
-				
-				for (int i = 0; i < producerNum; i++)
-					producers.get(i).join();
-				for (int i = 0; i < consumerNum; i++)
-					consumers.get(i).join();
-			}
-		});
 	}
 	
 	private Lock lock = new Lock();

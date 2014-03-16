@@ -1,6 +1,8 @@
 //u`ofe`{i`nlhofgdhbi`nsthvtmhg`o
 //PART OF THE NACHOS. DON'T CHANGE CODE OF THIS LINE
 package nachos.threads;
+import java.util.Comparator;
+import java.util.PriorityQueue;
 
 import nachos.machine.*;
 
@@ -17,8 +19,8 @@ public class Alarm {
      * alarm.
      */
     public Alarm() {
-	Machine.timer().setInterruptHandler(new Runnable() {
-		public void run() { timerInterrupt(); }
+    	Machine.timer().setInterruptHandler(new Runnable() {
+    		public void run() { timerInterrupt(); }
 	    });
     }
 
@@ -29,7 +31,18 @@ public class Alarm {
      * that should be run.
      */
     public void timerInterrupt() {
-	KThread.currentThread().yield();
+    	WaitingType w = waitingQueue.peek();
+    	while (w != null && w.wakeupTime >= Machine.timer().getTime()) {
+    		Semaphore sem = w.sem;
+    			
+    		lock.acquire();
+    		waitingQueue.poll();
+    		w = waitingQueue.peek();
+    		lock.release();
+    			
+    		sem.V();
+    	}
+    	KThread.currentThread().yield();
     }
 
     /**
@@ -48,8 +61,40 @@ public class Alarm {
      */
     public void waitUntil(long x) {
 	// for now, cheat just to get something working (busy waiting is bad)
-	long wakeTime = Machine.timer().getTime() + x;
-	while (wakeTime > Machine.timer().getTime())
-	    KThread.yield();
+    	long wakeTime = Machine.timer().getTime() + x;
+    	WaitingType w = new WaitingType(wakeTime , new Semaphore(0));
+    	
+    	lock.acquire();
+    	waitingQueue.add(w);
+    	lock.release();
+    	
+    	w.sem.P();
     }
+    
+    public class WaitingType {
+    	long wakeupTime;
+    	Semaphore sem;
+    	
+    	WaitingType(long wakeupTime , Semaphore sem) {
+    		this.wakeupTime = wakeupTime;
+    		this.sem = sem;
+    	}
+    }
+    
+    private Lock lock = new Lock();
+    
+    private PriorityQueue<WaitingType> waitingQueue =
+    		new PriorityQueue<WaitingType>(1 , new Comparator() {
+    			@Override
+    			public int compare(Object o1 , Object o2) {
+    				WaitingType w1 = (WaitingType)o1;
+    				WaitingType w2 = (WaitingType)o2;
+    				if (w1.wakeupTime < w2.wakeupTime) 
+    					return -1;
+    				else if (w1.wakeupTime > w2.wakeupTime)
+    					return 1;
+    				else 
+    					return 0;
+    			}
+    		});
 }
