@@ -57,8 +57,10 @@ public class ThreadedKernel extends Kernel {
     	//test1.testJoin();
     	//TestCondition2 test2 = new TestCondition2();
     	//test2.testCondition2();
-    	TestAlarm test3 = new TestAlarm();
-    	test3.testAlarm();
+    	//TestAlarm test3 = new TestAlarm();
+    	//test3.testAlarm();
+    	TestCommunicator test4 = new TestCommunicator();
+    	test4.testCommunicator();
     	
     	if (Machine.bank() != null) {
     		ElevatorBank.selfTest();
