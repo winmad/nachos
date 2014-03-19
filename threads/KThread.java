@@ -157,7 +157,7 @@ public class KThread {
 
 	Machine.interrupt().restore(intStatus);
     }
-
+    
     private void runThread() {
     	begin();
     	target.run();
