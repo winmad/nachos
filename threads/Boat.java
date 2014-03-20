@@ -22,8 +22,8 @@ public class Boat
     	System.out.println("\n ***Testing Boats with 3 children, 3 adults***");
     	begin(3, 3, b);
     	
-    	//System.out.println("\n ***Testing Boats with 10 children, 10 adults***");
-    	//begin(10 , 10 , b);
+    	System.out.println("\n ***Testing Boats with 10 children, 10 adults***");
+    	begin(5, 5, b);
     }
 
     public static void begin( int adults, int children, BoatGrader b )
@@ -86,6 +86,7 @@ public class Boat
     	 */
     	islandSt.acquire();
     	
+    	/** children have priority */
     	while (childrenSt >= 2) {
     		adultWaitAtSt.sleep();
     	}
@@ -100,6 +101,7 @@ public class Boat
     	
     	adultsEd++;
     	
+    	/** goes adults, returns child */
     	childRestAtEd.wake();
     	
     	islandEd.release();
@@ -113,6 +115,7 @@ public class Boat
     	while (childrenSt + adultsSt >= 2) {
     		islandSt.acquire();
     		
+    		/** if no pairs of child, let adults use boat */
     		if (childrenSt == 1)
     			adultWaitAtSt.wake();
     		
@@ -122,8 +125,9 @@ public class Boat
     		
     		if (childrenStWaitBoat == 0) {
     			childrenStWaitBoat++;
+    			
     			childWaitForBoat.wake();
-    			childWaitForAnother.sleep(); // ?
+    			childWaitForAnother.sleep();
     			
     			bg.ChildRowToMolokai();
     			
@@ -131,6 +135,7 @@ public class Boat
     		}
     		else {
     			childrenStWaitBoat++;
+    			
     			childWaitForAnother.wake();
     			
     			bg.ChildRideToMolokai();
@@ -149,6 +154,7 @@ public class Boat
     		childrenEd++;
     		childrenOnBoat++;
     		
+    		/** only 1 child returns, another can have a rest */
     		if (childrenOnBoat == 1) 
     			childRestAtEd.sleep();
     		
@@ -167,6 +173,7 @@ public class Boat
     		islandSt.release();
     	}
     	
+    	/** deal with only 1 person specifically, call DONE */
     	islandSt.acquire();
     	childrenSt--;
     	bg.ChildRowToMolokai();
@@ -196,16 +203,36 @@ public class Boat
     private static int childrenEd;
     private static int adultsSt;
     private static int adultsEd;
+
+    /** 
+     * At start island, # children waiting the boat,
+     * only the first 2 children can have the boat 
+     */
     private static int childrenStWaitBoat;
+    
+    /**
+     * make sure one child will return when they reach the destination
+     */
     private static int childrenOnBoat;
     
     private static boolean boatAtSt;
+    
+    /** make sure we deal with one island at a time */
     private static Lock islandSt = new Lock();
     private static Lock islandEd = new Lock();
+    
+    /** will be waken if all children and adults reach the destination */
     private static Lock doneLock = new Lock();
-    private static Condition adultWaitAtSt = new Condition(islandSt);
-    private static Condition childWaitForBoat = new Condition(islandSt);
-    private static Condition childWaitForAnother = new Condition(islandSt);
-    private static Condition childRestAtEd = new Condition(islandEd);
     private static Condition done = new Condition(doneLock);
+    
+    /** children have the priority to use the boat */
+    private static Condition adultWaitAtSt = new Condition(islandSt);
+    
+    private static Condition childWaitForBoat = new Condition(islandSt);
+    
+    /** one child should wait another child */
+    private static Condition childWaitForAnother = new Condition(islandSt);
+    
+    /** only one child will return, another can have a rest */
+    private static Condition childRestAtEd = new Condition(islandEd);
 }

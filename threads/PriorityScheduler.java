@@ -147,6 +147,7 @@ public class PriorityScheduler extends Scheduler {
     	public KThread nextThread() {
     		Lib.assertTrue(Machine.interrupt().disabled());
     		
+    		/** the thread gives up the resource */
     		if (resAccessing != null) {
     			this.resAccessing.resources.remove(this);
     			
@@ -158,6 +159,7 @@ public class PriorityScheduler extends Scheduler {
     			}
     		}
     		
+    		/** nextThread acquires resource */
     		ThreadState nextThreadState = pickNextThread();
     		if (nextThreadState != null) {
     			this.waitQueue.remove(nextThreadState);
@@ -224,9 +226,9 @@ public class PriorityScheduler extends Scheduler {
     				return -1;
     			else if (p1 > p2)
     				return 1;
-    			else if (t1 < t2)
-    				return -1;
     			else if (t1 > t2)
+    				return -1;
+    			else if (t1 < t2)
     				return 1;
     			else
     				return 0;
@@ -285,6 +287,7 @@ public class PriorityScheduler extends Scheduler {
     	 */
     	public int getEffectivePriority() {
     		int res = priority;
+    		/** receive all donations */
     		if (resources != null && !resources.isEmpty())
     			res = Math.max(priority , resources.last().getMaxPriority());
     		return res;
@@ -294,6 +297,7 @@ public class PriorityScheduler extends Scheduler {
     	 * Update the effective priority of the associated thread
     	 */
     	public void updatePriority(PriorityQueue resourceQueue) {
+    		/** will be called if the thread has the resource */
     		if (!resourceQueue.transferPriority)
     			return;
     		
@@ -305,6 +309,7 @@ public class PriorityScheduler extends Scheduler {
     		
     		priority = res;
     		
+    		/** waiting threads would donate their priority */
     		if (this.resourceWaitQueue != null &&
     			this.resourceWaitQueue.resAccessing != null) {
     			this.resourceWaitQueue.resAccessing.updatePriority(this.resourceWaitQueue);
@@ -324,10 +329,13 @@ public class PriorityScheduler extends Scheduler {
    			if (resourceWaitQueue == null)
    				return;
    			
+   			/** receive donated priority by the waiting threads */
     		if (!resources.isEmpty()) {
     			PriorityQueue resourceQueue = resources.last();
     			updatePriority(resourceQueue);
     		}
+    		
+    		/** donate its own priority to the thread holding the resource */
     		
     		if (resourceWaitQueue != null &&
     			resourceWaitQueue.transferPriority) {
@@ -348,10 +356,12 @@ public class PriorityScheduler extends Scheduler {
     	 * @see	nachos.threads.ThreadQueue#waitForAccess
     	 */
     	public void waitForAccess(PriorityQueue waitQueue) {
+    		/** add in waitQueue */
     		this.addTime = Machine.timer().getTime();
     		this.resourceWaitQueue = waitQueue;
     		this.resourceWaitQueue.waitQueue.add(this);
     		
+    		/** waiting thread will donate its priority to the thread holding the resource */
     		if (waitQueue.transferPriority) {
     			this.resourceWaitQueue.resAccessing.updatePriority(
     					this.resourceWaitQueue);
@@ -369,9 +379,11 @@ public class PriorityScheduler extends Scheduler {
     	 * @see	nachos.threads.ThreadQueue#nextThread
     	 */
     	public void acquire(PriorityQueue waitQueue) {
+    		/** acquired resources, so doesn't waiting anymore */
     		this.resourceWaitQueue = null;
     		waitQueue.resAccessing = this;
     		
+    		/** would be donated priority by threads in waitQueue */
     		if (waitQueue.transferPriority) {
     			this.updatePriority(waitQueue);
     		}
