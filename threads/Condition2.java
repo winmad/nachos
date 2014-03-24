@@ -26,7 +26,7 @@ public class Condition2 {
      */
     public Condition2(Lock conditionLock) {
     	this.conditionLock = conditionLock;
-    	this.waitThreads = ThreadedKernel.scheduler.newThreadQueue(false);
+    	this.waitThreads = new LinkedList<KThread>();
     }
 
     /**
@@ -37,15 +37,18 @@ public class Condition2 {
      */
     public void sleep() {
     	Lib.assertTrue(conditionLock.isHeldByCurrentThread());
+	    	
+    	conditionLock.release();
     	
     	boolean intStatus = Machine.interrupt().disable();
-    	waitThreads.waitForAccess(KThread.currentThread());
     	
-    	conditionLock.release();
+    	waitThreads.add(KThread.currentThread());
     	KThread.sleep();
+    	
+    	Machine.interrupt().restore(intStatus);  	
+    	
     	conditionLock.acquire();
     	
-    	Machine.interrupt().restore(intStatus);
     }
 
     /**
@@ -57,7 +60,10 @@ public class Condition2 {
     	
     	boolean intStatus = Machine.interrupt().disable();
     	
-    	KThread nextThread = waitThreads.nextThread();
+    	KThread nextThread = null;
+    	if (!waitThreads.isEmpty())
+    		nextThread = waitThreads.removeFirst();
+    	
     	if (nextThread != null)
     		nextThread.ready();
     	
@@ -70,16 +76,12 @@ public class Condition2 {
      */
     public void wakeAll() {
     	Lib.assertTrue(conditionLock.isHeldByCurrentThread());
-    	
-    	boolean intStatus = Machine.interrupt().disable();
-    	
-    	KThread nextThread;
-    	while ((nextThread = waitThreads.nextThread()) != null)
-    		nextThread.ready();
-    	
-    	Machine.interrupt().restore(intStatus);
+
+    	while (!waitThreads.isEmpty()) {
+    		wake();
+    	}
     }
 
     private Lock conditionLock;
-    private ThreadQueue waitThreads;
+    private LinkedList<KThread> waitThreads;
 }
