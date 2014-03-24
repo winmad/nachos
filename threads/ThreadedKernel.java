@@ -53,20 +53,17 @@ public class ThreadedKernel extends Kernel {
     	Semaphore.selfTest();
     	SynchList.selfTest();
 	
-    	//TestKThread test1 = new TestKThread();
-    	//test1.testJoin();
+    	TestKThread test1 = new TestKThread();
+    	test1.testJoin();
     	
-    	//TestCondition2 test2 = new TestCondition2();
-    	//test2.testCondition2();
+    	TestCondition2 test2 = new TestCondition2();
+    	test2.testCondition2();
     	
-    	//TestAlarm test3 = new TestAlarm();
-    	//test3.testAlarm();
+    	TestAlarm test3 = new TestAlarm();
+    	test3.testAlarm();
     	
-    	//TestCommunicator test4 = new TestCommunicator();
-    	//test4.testCommunicator();
-    	
-    	//TestPriorityScheduler test5 = new TestPriorityScheduler();
-    	//test5.selfTest();
+    	TestCommunicator test4 = new TestCommunicator();
+    	test4.testCommunicator();
     	
     	Boat.selfTest();
     	

@@ -2,9 +2,6 @@ package nachos.test.unittest;
 import java.util.LinkedList;
 
 import nachos.threads.*;
-import static org.junit.Assert.*;
-
-import org.junit.Test;
 
 
 public class TestCondition2 {

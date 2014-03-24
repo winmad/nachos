@@ -4,8 +4,6 @@ package nachos.threads;
 
 import java.util.LinkedList;
 
-import org.junit.Test;
-
 import nachos.machine.*;
 
 /**

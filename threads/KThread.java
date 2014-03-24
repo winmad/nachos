@@ -2,7 +2,6 @@
 //PART OF THE NACHOS. DON'T CHANGE CODE OF THIS LINE
 package nachos.threads;
 
-import static org.junit.Assert.assertTrue;
 import nachos.machine.*;
 
 /**

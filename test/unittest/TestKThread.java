@@ -1,8 +1,6 @@
 package nachos.test.unittest;
-import nachos.threads.*;
-import static org.junit.Assert.*;
 
-import org.junit.Test;
+import nachos.threads.*;
 
 
 public class TestKThread {

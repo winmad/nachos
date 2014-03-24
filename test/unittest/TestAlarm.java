@@ -2,13 +2,8 @@ package nachos.test.unittest;
 import nachos.machine.Machine;
 import nachos.threads.*;
 
-import org.junit.Test;
-
-import static org.junit.Assert.*;
-
 
 public class TestAlarm {
-	@Test
 	public void testAlarm() {
 		System.out.println("=== test task 3: alarm ===");
 		KThread t1 = new KThread(new SetAlarm(5000)).setName("t1");
