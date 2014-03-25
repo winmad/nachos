@@ -49,7 +49,7 @@ public class ThreadedKernel extends Kernel {
      * tests here.
      */
     public void selfTest() {
-    	//KThread.selfTest();
+    	KThread.selfTest();
     	Semaphore.selfTest();
     	SynchList.selfTest();
 	

@@ -22,8 +22,8 @@ public class Boat
     	System.out.println("\n ***Testing Boats with 3 children, 3 adults***");
     	begin(3, 3, b);
     	
-    	System.out.println("\n ***Testing Boats with 10 children, 10 adults***");
-    	begin(5, 5, b);
+    	//System.out.println("\n ***Testing Boats with 10 children, 10 adults***");
+    	//begin(5, 5, b);
     }
 
     public static void begin( int adults, int children, BoatGrader b )

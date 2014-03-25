@@ -19,10 +19,12 @@ public class TestCondition2 {
 			consumers.get(i).fork();
 		}
 			
-		for (int i = 0; i < producerNum; i++)
+		for (int i = 0; i < producerNum; i++) {
 			producers.get(i).join();
-		for (int i = 0; i < consumerNum; i++)
+		}
+		for (int i = 0; i < consumerNum; i++) {
 			consumers.get(i).join();
+		}
 	}
 	    	
 	private class Producer implements Runnable {
