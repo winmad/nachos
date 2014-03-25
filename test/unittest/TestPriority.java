@@ -5,6 +5,38 @@ import nachos.machine.Machine;
 import nachos.threads.*;
 
 
+
+/* Test priority Scheduler.
+ *  The test will be 3 parts with 5 cases:
+ *  	Part A: Testing the priority scheduling without priority donation:
+ *  		Case 1:
+ *  			Two threads A (with priority 7) and B (with priority 4), output 10 a's and 10 b's respectively
+ *  		Case 2:
+ *  			The same to Case 1, except that we will decrease A's priority to 2 after outputting the first half of A's.
+ *  	
+ *  	Part B: Testing the donation and the method getEffectivePriority() (this also means testing the method getMaxPriority()).
+ *  		Case 3:
+ *  			Three threads A, B, C with initial priority 4, 5, 7; A and C want to acquire the same lock,
+ *  			C has a higher priority. However, we decrease C's priority to 2 after it really acquires the lock.
+ *  			This time, A should donate its priority to C since it holds the resource that A wants.
+ *  			At this moment, we outputs C.getEffectivePriority() to see whether is correct or not (this
+ *  			also test the method  getMaxPriority() since they will be called by each other).
+ *  			The expected finishing order is: A B C (since after donation C will have a priority 4, less than B's.
+ * 			Case 4:
+ * 				Similar to Case 3, except that we have an initial priority 6, 4, 7 for A, B, C, respectively.
+ * 				The expected finishing order is: A C B.
+ * 
+ * 		Part C: Efficiency Test.
+ * 			We implement the Queue Use TreeSet, meaning that we will cause time O(log N) for single operation.
+ * 			To test this, we test the elapsed time's change when N is various.
+ * 			Case 5:
+ * 				N threads, forked at about the same time, doing the same thing, we test the total time.
+ * 				Priorities of threads are generated following a uniform distribution in the range [0, 7], independently.
+ * 				Plot the time's variation according that of N, we expect to get a plot not to increase to fast.
+ */
+
+
+
 public class TestPriority {
 
 	public static long tic;
@@ -160,10 +192,10 @@ public class TestPriority {
 		/*
 		 * Case 3: Tests priority donation
 		 *
-		 * This runs t1 with priority 7, t2 with priority 6 and t3 with
-		 * priority 4. t1 will wait on a lock, and while t2 would normally
+		 * This runs A with priority 4, tB with priority 5 and C with
+		 * priority 7. A will wait on a lock, and while B would normally
 		 * then steal all available CPU, priority donation will ensure that
-		 * t3 is given control in order to help unlock t1.
+		 * C is given control in order to help unlock C.
 		 *
 		 */
 
@@ -223,6 +255,16 @@ public class TestPriority {
 		selfTestRun( t1, 4, t2, 5, t3, 7 );
 
 
+		/*
+		 * Case 4: Tests priority donation
+		 *
+		 * This runs A with priority 6, tB with priority 4 and C with
+		 * priority 7. A will wait on a lock, and while B would normally
+		 * then steal all available CPU, priority donation will ensure that
+		 * C is given control in order to help unlock C.
+		 *
+		 */
+		
 		System.out.println( "Case 4:" );
 		
 		
@@ -280,10 +322,18 @@ public class TestPriority {
 
 		selfTestRun( t1, 6, t2, 4, t3, 7 );
 
+		/*
+		 * Case 5: Efficiency Test
+		 *		
+		 *		N threads, each thread do the same work.
+		 *		Plot a figure of elapsed time according to N.		
+		 *
+		 */
+		
 		
 		System.out.println("Case 5: ");
 		
-		final int N = 100;
+		final int N = 250;
 		
 		
 		KThread [] thread_pool = new KThread[N];

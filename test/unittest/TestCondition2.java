@@ -3,17 +3,28 @@ import java.util.LinkedList;
 
 import nachos.threads.*;
 
+// Test the condition variable
+// We test the condition variable to implement the Producer-Consumer model. 
+// We have 10 consumers and 10 producers. The flow of the middle bottleneck is 3.
+// The way we implement this model by condition variables is the same as was taught in class.
+// The outputs will imply whether the implementation is valid.
+
 
 public class TestCondition2 {
 	public void testCondition2() {
 		System.out.println("=== test task 2: condition2 ===");
+		
+		//two linked lists, represent producers and consumers, respectively.
 		LinkedList<KThread> producers = new LinkedList<KThread>();
 		LinkedList<KThread> consumers = new LinkedList<KThread>();
 				
+		//fork producers
 		for (int i = 0; i < producerNum; i++) {
 			producers.add(new KThread(new Producer()).setName("Produer #" + i));
 			producers.get(i).fork();
 		}
+		
+		//fork consumers
 		for (int i = 0; i < consumerNum; i++) {
 			consumers.add(new KThread(new Consumer()).setName("Consumer #" + i));
 			consumers.get(i).fork();
