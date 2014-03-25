@@ -71,7 +71,7 @@ public class TestCondition2 {
 	private Condition2 cond = new Condition2(lock);
 	private int counter = 0;
 	
-	private static final int maxCount = 2;
-	private static final int producerNum = 5;
-	private static final int consumerNum = 5;
+	private static final int maxCount = 3;
+	private static final int producerNum = 10;
+	private static final int consumerNum = 15;
 }

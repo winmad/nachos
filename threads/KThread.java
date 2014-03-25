@@ -221,6 +221,8 @@ public class KThread {
     public static void yield() {
 	Lib.debug(dbgThread, "Yielding thread: " + currentThread.toString());
 
+	//System.out.println("Yielding thread: " + currentThread.toString());
+	
 	Lib.assertTrue(currentThread.status == statusRunning);
 
 	boolean intStatus = Machine.interrupt().disable();
@@ -260,7 +262,8 @@ public class KThread {
      */
     public void ready() {
 	Lib.debug(dbgThread, "Ready thread: " + toString());
-
+	Scheduler temp = new PriorityScheduler();
+	//System.out.println("Ready thread: " + toString() + "(Priority: " + temp.getPriority() + ")");
 	Lib.assertTrue(Machine.interrupt().disabled());
 	Lib.assertTrue(status != statusReady);
 
@@ -365,7 +368,9 @@ public class KThread {
      */
     protected void restoreState() {
 	Lib.debug(dbgThread, "Running thread: " + currentThread.toString());
-
+	Scheduler temp = new PriorityScheduler();
+	//System.out.println("Running thread: " + currentThread.toString() + "(Priority: " + temp.getPriority() + ")");
+	
 	Lib.assertTrue(Machine.interrupt().disabled());
 	Lib.assertTrue(this == currentThread);
 	Lib.assertTrue(tcb == TCB.currentTCB());
