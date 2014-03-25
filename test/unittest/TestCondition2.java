@@ -73,5 +73,5 @@ public class TestCondition2 {
 	
 	private static final int maxCount = 3;
 	private static final int producerNum = 10;
-	private static final int consumerNum = 15;
+	private static final int consumerNum = 10;
 }
