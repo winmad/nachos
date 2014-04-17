@@ -2,6 +2,10 @@
 //PART OF THE NACHOS. DON'T CHANGE CODE OF THIS LINE
 package nachos.userprog;
 
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedList;
+
 import nachos.machine.*;
 import nachos.threads.*;
 import nachos.userprog.*;
@@ -14,7 +18,7 @@ public class UserKernel extends ThreadedKernel {
      * Allocate a new user kernel.
      */
     public UserKernel() {
-	super();
+    	super();
     }
 
     /**
@@ -22,13 +26,28 @@ public class UserKernel extends ThreadedKernel {
      * processor's exception handler.
      */
     public void initialize(String[] args) {
-	super.initialize(args);
+    	super.initialize(args);
 
-	console = new SynchConsole(Machine.console());
+    	console = new SynchConsole(Machine.console());
 
-	Machine.processor().setExceptionHandler(new Runnable() {
-		public void run() { exceptionHandler(); }
-	    });
+    	freePhysPages = new LinkedList<Integer>();
+    	memoryLock = new Lock();
+    	
+    	int numPhysPages = Machine.processor().getNumPhysPages();
+    	for (int i = 0; i < numPhysPages; i++)
+    		freePhysPages.add(i);
+    	
+    	newPID = 0;
+    	numRunningProcs = 0;
+    	newPIDLock = new Lock();
+    	numRunningProcsLock = new Lock();
+    	
+    	files = new HashMap<String , Integer>();
+    	unlinkWaitingList = new HashSet<String>();
+    	
+    	Machine.processor().setExceptionHandler(new Runnable() {
+    		public void run() { exceptionHandler(); }
+    	});
     }
 
     /**
@@ -36,7 +55,7 @@ public class UserKernel extends ThreadedKernel {
      */
     public void selfTest() {
 	super.selfTest();
-
+	/*
 	System.out.println("Testing the console device. Typed characters");
 	System.out.println("will be echoed until q is typed.");
 
@@ -49,6 +68,7 @@ public class UserKernel extends ThreadedKernel {
 	while (c != 'q');
 
 	System.out.println("");
+	*/
     }
 
     /**
@@ -114,4 +134,16 @@ public class UserKernel extends ThreadedKernel {
 
     // dummy variables to make javac smarter
     private static Coff dummy1 = null;
+    
+    public static LinkedList<Integer> freePhysPages;
+    public static Lock memoryLock;
+    
+    public static int newPID;
+    public static Lock newPIDLock;
+    
+    public static int numRunningProcs;
+    public static Lock numRunningProcsLock;
+    
+    public static HashMap<String , Integer> files;
+    public static HashSet<String> unlinkWaitingList;
 }

@@ -52,7 +52,7 @@ public class ThreadedKernel extends Kernel {
     	KThread.selfTest();
     	Semaphore.selfTest();
     	SynchList.selfTest();
-	/*
+    	/*
     	TestKThread test1 = new TestKThread();
     	test1.testJoin();
     	
@@ -67,7 +67,7 @@ public class ThreadedKernel extends Kernel {
     	*/
     	TestPriority test5 = new TestPriority();
     	test5.selfTest();
-    	    	
+    	
     	//Boat.selfTest();
     	
     	if (Machine.bank() != null) {

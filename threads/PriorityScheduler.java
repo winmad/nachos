@@ -165,6 +165,7 @@ public class PriorityScheduler extends Scheduler {
     		/** nextThread acquires resource */
     		ThreadState nextThreadState = pickNextThread();
     		if (nextThreadState != null) {
+    			nextThreadState.addTime = 0;
     			this.waitQueue.remove(nextThreadState);
     			this.acquire(nextThreadState.thread);
     			return nextThreadState.thread;
@@ -383,8 +384,7 @@ public class PriorityScheduler extends Scheduler {
     		
     		/** waiting thread will donate its priority to the thread holding the resource */
     		if (waitQueue.transferPriority) {
-    			this.resourceWaitQueue.resAccessing.updatePriority(
-    					waitQueue);
+    			this.resourceWaitQueue.resAccessing.updatePriority(waitQueue);
     		}
     	}
     	
@@ -401,6 +401,7 @@ public class PriorityScheduler extends Scheduler {
     	public void acquire(PriorityQueue waitQueue) {
     		/** acquired resources, so doesn't waiting anymore */
     		this.resourceWaitQueue = null;
+    		this.addTime = 0;
     		waitQueue.resAccessing = this;
     		
     		/** would be donated priority by threads in waitQueue */

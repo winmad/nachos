@@ -10,7 +10,7 @@
 
 /* size of physical memory; with code, we'll run out of space! */
 #define SORTSIZE	256
-#define SORTSHIFT	0
+#define SORTSHIFT	5
 
 int array[SORTSIZE<<SORTSHIFT];
 
@@ -42,10 +42,13 @@ main()
 
   /* and last, verify */
   for (i=0; i<SORTSIZE; i++) {
-    if (A(i) != i)
+    if (A(i) != i) {
+	  printf("sort error\n");
       return 1;
+	}
   }
 
+  printf("sort success\n");
   /* if successful, return 0 */
   return 0;
 }
