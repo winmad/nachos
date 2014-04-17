@@ -4,8 +4,10 @@ package nachos.threads;
 
 import nachos.machine.*;
 
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.Hashtable;
+import java.util.LinkedList;
 import java.util.TreeSet;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -132,6 +134,8 @@ public class PriorityScheduler extends Scheduler {
     protected class PriorityQueue extends ThreadQueue {
     	PriorityQueue(boolean transferPriority) {
     		this.transferPriority = transferPriority;
+    		waitQueue = new LinkedList<ThreadState>();
+    		resAccessing = null;
     	}
 
     	public void waitForAccess(KThread thread) {
@@ -149,23 +153,21 @@ public class PriorityScheduler extends Scheduler {
     		
     		/** the thread gives up the resource */
     		if (resAccessing != null) {
-    			this.resAccessing.resources.remove(this);
+    			this.resAccessing.resources.remove(waitQueue);
     			
     			if (!this.resAccessing.resources.isEmpty()) {
-    				PriorityQueue resourceQueue = this.resAccessing.resources.last();
+    				PriorityQueue resourceQueue = this.resAccessing.resources.keys().nextElement();
     				if (resourceQueue.transferPriority) {
     					this.resAccessing.updatePriority(resourceQueue);
     				}
     			}
     			else
     				this.resAccessing.priority = this.resAccessing.originalPriority;
-    			
     		}
     		
     		/** nextThread acquires resource */
     		ThreadState nextThreadState = pickNextThread();
     		if (nextThreadState != null) {
-    			nextThreadState.addTime = 0;
     			this.waitQueue.remove(nextThreadState);
     			this.acquire(nextThreadState.thread);
     			return nextThreadState.thread;
@@ -183,9 +185,15 @@ public class PriorityScheduler extends Scheduler {
     	 */
     	protected ThreadState pickNextThread() {
     		ThreadState nextThreadState = null;
+    		int maxPriority = -1;
     		
-    		if (!waitQueue.isEmpty()) {
-    			nextThreadState = waitQueue.last();
+    		for (int i = 0; i < waitQueue.size(); i++) {
+    			ThreadState ts = waitQueue.get(i);
+    			int tmpPriority = ts.getEffectivePriority();
+    			if (tmpPriority > maxPriority) {
+    				maxPriority = tmpPriority;
+    				nextThreadState = ts;
+    			}
     		}
     		return nextThreadState;
     	}
@@ -204,18 +212,16 @@ public class PriorityScheduler extends Scheduler {
     	}
 
     	protected int getMaxPriority() {
-    		maxPriority = -1;
-    		if (this.transferPriority && !this.waitQueue.isEmpty())
-    			maxPriority = waitQueue.last().getEffectivePriority();
+    		int maxPriority = -1;
+    		if (transferPriority) {
+    			for (int i = 0; i < waitQueue.size(); i++) {
+    				ThreadState ts = waitQueue.get(i);
+    				maxPriority = Math.max(maxPriority , ts.getEffectivePriority());
+    			}
+    		}
     		return maxPriority;
     	}
     	
-    	protected long getAddTime() {
-    		long t = 0;
-    		if (this.transferPriority && !this.waitQueue.isEmpty())
-    			t = waitQueue.last().addTime;
-    		return t;
-    	}
     	
     	/**
     	 * <tt>true</tt> if this queue should transfer priority from waiting
@@ -226,31 +232,7 @@ public class PriorityScheduler extends Scheduler {
     	/** the thread accessing to resources */
     	protected ThreadState resAccessing;
     	
-    	int maxPriority;
-    	
-    	/** a sorted set according to a thread's priority */
-    	protected TreeSet<ThreadState> waitQueue = new TreeSet<ThreadState>(new Comparator() {
-    		@Override
-    		public int compare(Object o1 , Object o2) {
-    			ThreadState th1 = (ThreadState)o1;
-    			ThreadState th2 = (ThreadState)o2;
-    			int p1 = th1.getEffectivePriority();
-    			int p2 = th2.getEffectivePriority();
-    			long t1 = th1.addTime;
-    			long t2 = th2.addTime;
-    			if (p1 < p2)
-    				return -1;
-    			else if (p1 > p2)
-    				return 1;
-    			else if (t1 > t2)
-    				return -1;
-    			else if (t1 < t2)
-    				return 1;
-    			else
-    				return 0;
-    		}
-    	});
-    	
+    	protected LinkedList<ThreadState> waitQueue;
     }
 
    	/**
@@ -269,24 +251,7 @@ public class PriorityScheduler extends Scheduler {
    		 */
    		public ThreadState(KThread thread) {
    			this.thread = thread;
-   			addTime = 0;
-   			resources = new TreeSet<PriorityQueue>(new Comparator() {
-   				@Override
-   				public int compare(Object o1 , Object o2) {
-   					PriorityQueue p1 = (PriorityQueue)o1;
-   					PriorityQueue p2 = (PriorityQueue)o2;
-   					if (p1.getMaxPriority() < p2.getMaxPriority())
-   						return -1;
-   					else if (p1.getMaxPriority() > p2.getMaxPriority())
-   						return 1;
-   					else if (p1.getAddTime() > p2.getAddTime())
-   						return -1;
-   					else if (p1.getAddTime() < p2.getAddTime())
-   						return 1;
-   					else
-   						return 0;
-   				}
-   			});
+   			resources = new Hashtable<PriorityQueue , Integer>();
    			resourceWaitQueue = null;
    			setPriority(priorityDefault);
    		}
@@ -306,11 +271,7 @@ public class PriorityScheduler extends Scheduler {
     	 * @return	the effective priority of the associated thread.
     	 */
     	public int getEffectivePriority() {
-    		int res = originalPriority;
-    		/** receive all donations */
-    		if (resources != null && !resources.isEmpty())
-    			res = Math.max(res , resources.last().getMaxPriority());
-    		return res;
+    		return priority;
     	}
     	
     	/**
@@ -320,11 +281,13 @@ public class PriorityScheduler extends Scheduler {
     		if (!resourceQueue.transferPriority)
     			return;
     		
-    		if (!resources.contains(resourceQueue))
-    			resources.add(resourceQueue);
+    		int maxPriority = resourceQueue.getMaxPriority();
+    		resources.put(resourceQueue , maxPriority);
     		
+    		Collection<Integer> priorities = resources.values();
     		int res = originalPriority;
-    		res = Math.max(res , resources.last().getMaxPriority());
+    		for (Integer p: priorities)
+    			res = Math.max(res , p);
     		
     		priority = res;
     		
@@ -352,7 +315,7 @@ public class PriorityScheduler extends Scheduler {
    				
    			/** receive donated priority by the waiting threads */
     		if (!resources.isEmpty()) {
-    			PriorityQueue resourceQueue = resources.last();
+    			PriorityQueue resourceQueue = resources.keys().nextElement();
     			if (resourceQueue.transferPriority)
     				updatePriority(resourceQueue);
     		}
@@ -378,7 +341,6 @@ public class PriorityScheduler extends Scheduler {
     	 */
     	public void waitForAccess(PriorityQueue waitQueue) {
     		/** add in waitQueue */
-    		this.addTime = Machine.timer().getTime();
     		waitQueue.waitQueue.add(this);
     		this.resourceWaitQueue = waitQueue;
     		
@@ -401,7 +363,6 @@ public class PriorityScheduler extends Scheduler {
     	public void acquire(PriorityQueue waitQueue) {
     		/** acquired resources, so doesn't waiting anymore */
     		this.resourceWaitQueue = null;
-    		this.addTime = 0;
     		waitQueue.resAccessing = this;
     		
     		/** would be donated priority by threads in waitQueue */
@@ -411,8 +372,7 @@ public class PriorityScheduler extends Scheduler {
     	}
     	
     	public void print() {
-    		System.out.println(thread.getName() + " has priority " + priority + 
-    				", added at " + addTime);
+    		System.out.println(thread.getName() + " has priority " + priority);
     	}
     	
    		/** The thread with which this object is associated. */
@@ -420,10 +380,8 @@ public class PriorityScheduler extends Scheduler {
     	/** The priority of the associated thread. */
     	protected int priority;
     	protected int originalPriority;
-    	/** The time when the thread is added in queue */
-    	protected long addTime;
     	/** All resources holding by the associated thread */
-    	protected TreeSet<PriorityQueue> resources;
+    	protected Hashtable<PriorityQueue , Integer> resources;
     	/** Waiting caching queue: all other threads waiting with the associated thread */
     	protected PriorityQueue resourceWaitQueue;
     }

@@ -79,7 +79,7 @@ public class TestPriority {
 	public static void selfTestRun(KThread[] t, int N) {
 		for(int i = 0; i < N; i++) {
 		int k = (int)Math.floor(Math.random() * 8);
-		if(k >= 8 || k < 0)
+		while(k >= 8 || k < 1)
 			k = (int)Math.floor(Math.random() * 8);
 		boolean int_state;
 

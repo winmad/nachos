@@ -1,7 +1,11 @@
 #################
+## Java
+#################
+*.class
+
+#################
 ## Eclipse
 #################
-
 *.pydevproject
 .project
 .metadata
