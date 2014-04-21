@@ -42,8 +42,11 @@ public class UserKernel extends ThreadedKernel {
     	newPIDLock = new Lock();
     	numRunningProcsLock = new Lock();
     	
+    	consoleOutputLock = new Lock();
+    	
     	files = new HashMap<String , Integer>();
     	unlinkWaitingList = new HashSet<String>();
+    	processes = new HashMap<Integer , UserProcess>();
     	
     	Machine.processor().setExceptionHandler(new Runnable() {
     		public void run() { exceptionHandler(); }
@@ -144,6 +147,9 @@ public class UserKernel extends ThreadedKernel {
     public static int numRunningProcs;
     public static Lock numRunningProcsLock;
     
+    public static Lock consoleOutputLock;
+    
     public static HashMap<String , Integer> files;
     public static HashSet<String> unlinkWaitingList;
+    public static HashMap<Integer , UserProcess> processes;
 }

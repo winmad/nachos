@@ -1,4 +1,6 @@
-package nachos.test.unittest;
+//u`ofe`{i`nlhofgdhbi`nsthvtmhg`o
+//PART OF THE NACHOS. DON'T CHANGE CODE OF THIS LINE
+package nachos.threads.threadsTest;
 import nachos.machine.Machine;
 
 
@@ -235,7 +237,8 @@ public class TestPriority {
 				KThread.yield();
 				Scheduler temp = new PriorityScheduler();
 				boolean intStatus = Machine.interrupt().disable();
-				System.out.println("Effective Priority of " + KThread.currentThread().getName() + ": " + temp.getEffectivePriority());
+				System.out.println("Effective Priority of " + KThread.currentThread().getName() + ": " + 
+						ThreadedKernel.scheduler.getEffectivePriority());
 
 		    	Machine.interrupt().restore(intStatus);
 
@@ -295,15 +298,15 @@ public class TestPriority {
 		t3 = new KThread(new Runnable() {
 			public void run() {
 				lock2.acquire();
-
+				
 				boolean int_state = Machine.interrupt().disable();
 				ThreadedKernel.scheduler.setPriority( 2 );
-				Scheduler temp = new PriorityScheduler();
 				Machine.interrupt().restore( int_state );
-
+				
 				KThread.yield();
 				boolean intStatus = Machine.interrupt().disable();
-				System.out.println("Effective Priority of " + KThread.currentThread().getName() + ": " + temp.getEffectivePriority());
+				System.out.println("Effective Priority of " + KThread.currentThread().getName() + ": " + 
+						ThreadedKernel.scheduler.getEffectivePriority());
 
 		    	Machine.interrupt().restore(intStatus);
 
@@ -314,7 +317,7 @@ public class TestPriority {
 				lock2.release();
 				KThread.yield();
 				lock2.acquire();
-				System.out.println( KThread.currentThread().getName() + " active-again (should be after 'a' done, but before 'b' done)" );
+				System.out.println( KThread.currentThread().getName() + " active-again (should be after 'a' done, and after 'b' done)" );
 				lock2.release();
 
 			}
@@ -333,7 +336,7 @@ public class TestPriority {
 		
 		System.out.println("Case 5: ");
 		
-		final int N = 250;
+		final int N = 200;
 		
 		
 		KThread [] thread_pool = new KThread[N];

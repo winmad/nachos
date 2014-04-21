@@ -31,13 +31,30 @@ public class Communicator {
     public void speak(int word) {
     	lock.acquire();
     	
-    	while (waitingListeners == 0 || speakingWord != null) {
+    	while (activeSpeakers > 0) {
+    		waitingSpeakers++;
     		speaker.sleep();
+    		waitingSpeakers--;
     	}
+    	
+    	activeSpeakers++;
     	
     	speakingWord = word;
     	
-    	listener.wakeAll();
+    	if (activeListeners > 0)
+    		retCond.wake();
+    	else {
+    		if (waitingListeners > 0)
+    			listener.wake();
+    		
+    		retCond.sleep();
+    		
+    		activeSpeakers--;
+    		activeListeners--;
+    		
+    		if (waitingSpeakers > 0)
+    			speaker.wake();
+    	}
     	
     	lock.release();
     }
@@ -51,25 +68,41 @@ public class Communicator {
     public int listen() {
     	lock.acquire();
     	
-    	waitingListeners++;
-    	
-    	while (speakingWord == null) {
-    		speaker.wakeAll();
+    	while (activeListeners > 0) {
+    		waitingListeners++;
     		listener.sleep();
+    		waitingListeners--;
     	}
     	
-    	waitingListeners--;
+    	activeListeners++;
     	
-    	int word = speakingWord;
-    	speakingWord = null;
+    	if (activeSpeakers > 0)
+    		retCond.wake();
+    	else {
+    		if (waitingSpeakers > 0)
+    			speaker.wake();
+    		
+    		retCond.sleep();
+    		
+    		activeSpeakers--;
+    		activeListeners--;
+    		
+    		if (waitingListeners > 0)
+    			listener.wake();
+    	}
+    	
+    	int res = speakingWord;
     	
     	lock.release();
-    	return word;
+    	
+    	return res;
     }
     
     private Lock lock = new Lock();
     private Condition listener = new Condition(lock);
     private Condition speaker = new Condition(lock);
-    private int waitingListeners = 0;
+    private Condition retCond = new Condition(lock);
+    private int waitingListeners = 0 , waitingSpeakers = 0;
+    private int activeListeners = 0 , activeSpeakers = 0;
     private Integer speakingWord = null; 
 }

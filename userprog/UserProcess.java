@@ -32,6 +32,8 @@ public class UserProcess {
     	UserKernel.newPID++;
     	UserKernel.newPIDLock.release();
     	
+    	UserKernel.processes.put(pid , this);
+    	
     	parent = null;
     	childpid = new HashSet<Integer>();
     	childExitStatus = new HashMap<Integer , Integer>();
@@ -68,16 +70,21 @@ public class UserProcess {
      * @return	<tt>true</tt> if the program was successfully executed.
      */
     public boolean execute(String name, String[] args) {
-    	if (!load(name, args))
-    		return false;
+    	try {
+    		if (!load(name, args))
+    			return false;
 
-    	UserKernel.numRunningProcsLock.acquire();
-    	UserKernel.numRunningProcs++;
-    	UserKernel.numRunningProcsLock.release();
+    		UserKernel.numRunningProcsLock.acquire();
+    		UserKernel.numRunningProcs++;
+    		UserKernel.numRunningProcsLock.release();
     	
-    	new UThread(this).setName(name).fork();
+    		new UThread(this).setName(name).fork();
 
-    	return true;
+    		return true;
+    	}
+    	catch (Exception ex) {
+    		return false;
+    	}
     }
 
     /**
@@ -239,7 +246,7 @@ public class UserProcess {
     	while (length > 0) {
     		int vpn = Processor.pageFromAddress(vaddr);
     		int voffset = Processor.offsetFromAddress(vaddr);
-    		int ppn = vpn2ppn(vpn , false);
+    		int ppn = vpn2ppn(vpn , true);
     		if (ppn == -1)
     			return amount;
     		
@@ -392,7 +399,8 @@ public class UserProcess {
     protected void unloadSections() {
     	UserKernel.memoryLock.acquire();
     	for (int i = 0; i < pageTable.length; i++) {
-    		UserKernel.freePhysPages.add(pageTable[i].ppn);
+    		if (pageTable[i] != null && pageTable[i].valid)
+    			UserKernel.freePhysPages.add(pageTable[i].ppn);
     	}
     	UserKernel.memoryLock.release();
     }
@@ -435,15 +443,12 @@ public class UserProcess {
     	for (int i = 0; i < numFileDescriptors; i++)
     		handleClose(i);
     	unloadSections();
-    	
-    	UserKernel.numRunningProcsLock.acquire();
-    	UserKernel.numRunningProcs--;
-    	if (UserKernel.numRunningProcs == 0) {
-    		UserKernel.numRunningProcsLock.release();
-    		Kernel.kernel.terminate();
-    		return 0;
+    	coff.close();
+    	for (Integer pid: childpid) {
+    		UserProcess child = UserKernel.processes.get(pid);
+    		if (child != null)
+    			child.parent = null;
     	}
-    	UserKernel.numRunningProcsLock.release();
     	
     	if (parent != null) {
     		parent.childExitStatusLock.acquire();
@@ -458,40 +463,58 @@ public class UserProcess {
     		parent.joinLock.release();
     	}
     	
+    	UserKernel.numRunningProcsLock.acquire();
+    	UserKernel.numRunningProcs--;
+    	if (UserKernel.numRunningProcs == 0) {
+    		UserKernel.numRunningProcsLock.release();
+    		Kernel.kernel.terminate();
+    		return 0;
+    	}
+    	UserKernel.numRunningProcsLock.release();
+    	
     	KThread.finish();
     	return 0;
     }
     
     private int handleExec(int execAddr , int argc , int argvAddrStart) {
-    	String exec = readVirtualMemoryString(execAddr , 256);
-    	if (exec == null)
-    		return -1;
-    	
-    	byte[] argvAddrs = new byte[argc * 4];
-    	int readAmount = readVirtualMemory(argvAddrStart , argvAddrs);
-    	if (readAmount != argvAddrs.length)
-    		return -1;
-    	
-    	String[] argv = new String[argc];
-    	for (int i = 0; i < argc; i++) {
-    		int argvAddr = (((int)argvAddrs[4 * i + 3] & 0xFF) << 24) |
-    				(((int)argvAddrs[4 * i + 2] & 0xFF) << 16) |
-    				(((int)argvAddrs[4 * i + 1] & 0xFF) << 8) |
-    				((int)argvAddrs[4 * i] & 0xFF);
-    		argv[i] = readVirtualMemoryString(argvAddr , 256);
-    		if (argv[i] == null)
-    			return -1;
+    	try {
+	    	String exec = readVirtualMemoryString(execAddr , 256);
+	    	if (exec == null)
+	    		return -1;
+	    	
+	    	if (exec == null || argc < 0 || argc > 16)
+	    		return -1;
+	    	
+	    	byte[] argvAddrs = new byte[argc * 4];
+	    	int readAmount = readVirtualMemory(argvAddrStart , argvAddrs);
+	    	if (readAmount < argvAddrs.length)
+	    		return -1;
+	    	
+	    	String[] argv = new String[argc];
+	    	for (int i = 0; i < argc; i++) {
+	    		int argvAddr = (int)((((int)argvAddrs[4 * i + 3] & 0xFF) << 24) |
+	    				(((int)argvAddrs[4 * i + 2] & 0xFF) << 16) |
+	    				(((int)argvAddrs[4 * i + 1] & 0xFF) << 8) |
+	    				((int)argvAddrs[4 * i] & 0xFF));
+	    		argv[i] = readVirtualMemoryString(argvAddr , 256);
+	    		if (argv[i] == null)
+	    			return -1;
+	    	}
+	    	
+	    	UserProcess childProc = newUserProcess();
+	    	childProc.parent = this;
+	    	
+	    	childpid.add(childProc.pid);
+	    	if (!childProc.execute(exec , argv)) {
+	    		childProc.handleClose(0);
+	    		childProc.handleClose(1);
+	    		return -1;
+	    	}
+	    	return childProc.pid;
     	}
-    	
-    	UserProcess childProc = newUserProcess();
-    	childProc.parent = this;
-    	childpid.add(childProc.pid);
-    	if (!childProc.execute(exec , argv)) {
-    		childProc.handleClose(0);
-    		childProc.handleClose(1);
+    	catch (Exception ex) {
     		return -1;
     	}
-    	return childProc.pid;
     }
 
     private int handleJoin(int joinpid , int statusAddr) {
@@ -538,7 +561,7 @@ public class UserProcess {
         			UserKernel.files.put(name , 1);
         		}
         		
-        		for (int i = 0; i < files.length; i++) {
+        		for (int i = 2; i < files.length; i++) {
         			if (files[i] == null) {
         				files[i] = file;
         				return i;
@@ -569,7 +592,7 @@ public class UserProcess {
         			UserKernel.files.put(name , 1);
         		}
         		
-        		for (int i = 0; i < files.length; i++) {
+        		for (int i = 2; i < files.length; i++) {
         			if (files[i] == null) {
         				files[i] = file;
         				return i;
@@ -588,10 +611,27 @@ public class UserProcess {
     		if (!isValidFD(fd))
     			return -1;
     		if (files[fd] != null) {
-    			byte[] readBuf = new byte[size];
-    			int sizeRead = files[fd].read(readBuf , 0 , size);
-    			int res = writeVirtualMemory(bufAddr , readBuf , 0 , sizeRead);
-    			return res;
+    			int bufSize = 4096;
+    			byte[] readBuf = new byte[bufSize];
+    			OpenFile file = files[fd];
+    			
+    			int sizeRead = 0 , totSizeRead = 0 , sizeWritten = 0;
+    			
+    			while (size > 0) {
+    				sizeRead = file.read(readBuf , 0 , Math.min(size , bufSize));
+    				if (sizeRead == -1)
+    					return -1;
+    				if (sizeRead == 0)
+    					return totSizeRead;
+    				sizeWritten = writeVirtualMemory(bufAddr , readBuf , 0 , sizeRead);
+    				if (sizeWritten != sizeRead)
+    					return totSizeRead + sizeWritten;
+    				
+    				totSizeRead += sizeRead;
+    				size -= sizeRead;
+    				bufAddr += sizeRead;
+    			}
+    			return totSizeRead;
     		}
     		return -1;
     	}
@@ -604,13 +644,32 @@ public class UserProcess {
     	try {
     		if (!isValidFD(fd))
     			return -1;
+
     		if (files[fd] != null) {
-    			byte[] writeBuf = new byte[size];
-    			int sizeWrite = readVirtualMemory(bufAddr , writeBuf , 0 , size);
-    			int res = files[fd].write(writeBuf , 0 , sizeWrite);
-    			if (res != size)
-    				return -1;
-    			return res;
+    			
+    			int bufSize = 4096;
+    			byte[] writeBuf = new byte[bufSize];
+    			OpenFile file = files[fd];
+    			
+    			int sizeWritten = 0 , totSizeWritten = 0 , sizeRead = 0;
+    			
+    			while (size > 0) {
+    				sizeRead = readVirtualMemory(bufAddr , writeBuf , 0 ,
+    						Math.min(size , bufSize));
+    				if (sizeRead == 0) {
+    					return -1;
+    				}
+    				sizeWritten = file.write(writeBuf , 0 , sizeRead);
+    				if (sizeWritten != sizeRead) {
+    					return -1;
+    					//return totSizeWritten + sizeWritten;
+    				}
+    				
+    				totSizeWritten += sizeWritten;
+    				size -= sizeWritten;
+    				bufAddr += sizeWritten;
+    			}
+    			return totSizeWritten;
     		}
     		return -1;
     	}

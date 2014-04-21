@@ -153,16 +153,13 @@ public class KThread {
 	    });
 
 	ready();
-
+	
 	Machine.interrupt().restore(intStatus);
     }
     
     private void runThread() {
     	begin();
-    	target.run();
-    	
-    	joinSemaphore.V();
-    	
+    	target.run();	
     	finish();
     }
 
@@ -196,9 +193,12 @@ public class KThread {
 	Lib.assertTrue(toBeDestroyed == null);
 	toBeDestroyed = currentThread;
 
-
 	currentThread.status = statusFinished;
 
+	KThread nextThread;
+	while ((nextThread = currentThread.joinThreadQueue.nextThread()) != null)
+		nextThread.ready();
+	
 	sleep();
     }
 
@@ -221,8 +221,6 @@ public class KThread {
     public static void yield() {
 	Lib.debug(dbgThread, "Yielding thread: " + currentThread.toString());
 
-	//System.out.println("Yielding thread: " + currentThread.toString());
-	
 	Lib.assertTrue(currentThread.status == statusRunning);
 
 	boolean intStatus = Machine.interrupt().disable();
@@ -262,7 +260,6 @@ public class KThread {
      */
     public void ready() {
 	Lib.debug(dbgThread, "Ready thread: " + toString());
-	Scheduler temp = new PriorityScheduler();
 	//System.out.println("Ready thread: " + toString() + "(Priority: " + temp.getPriority() + ")");
 	Lib.assertTrue(Machine.interrupt().disabled());
 	Lib.assertTrue(status != statusReady);
@@ -270,6 +267,8 @@ public class KThread {
 	status = statusReady;
 	if (this != idleThread)
 	    readyQueue.waitForAccess(this);
+	
+	//readyQueue.print();
 
 	Machine.autoGrader().readyThread(this);
     }
@@ -285,10 +284,17 @@ public class KThread {
 
     	Lib.assertTrue(this != currentThread);
     	
-    	joinSemaphore.P();
+    	boolean intStatus = Machine.interrupt().disable();
     	
-    	/** To make sure second call doesn't work */
-    	joinSemaphore.V();
+    	if (this.status != statusFinished) {
+    		this.joinThreadQueue.waitForAccess(currentThread);
+    		
+    		//joinThreadQueue.print();
+    		
+    		sleep();
+    	}
+    	
+    	Machine.interrupt().restore(intStatus);
     }
 
     /**
@@ -321,7 +327,9 @@ public class KThread {
 	KThread nextThread = readyQueue.nextThread();
 	if (nextThread == null)
 	    nextThread = idleThread;
-
+	
+	//readyQueue.print();
+	
 	nextThread.run();
     }
 
@@ -368,7 +376,7 @@ public class KThread {
      */
     protected void restoreState() {
 	Lib.debug(dbgThread, "Running thread: " + currentThread.toString());
-	Scheduler temp = new PriorityScheduler();
+
 	//System.out.println("Running thread: " + currentThread.toString() + "(Priority: " + temp.getPriority() + ")");
 	
 	Lib.assertTrue(Machine.interrupt().disabled());
@@ -443,8 +451,12 @@ public class KThread {
     private Runnable target;
     private TCB tcb;
 
-    /** A new semaphore for JOIN operation */
-    private Semaphore joinSemaphore = new Semaphore(0);
+	private ThreadQueue joinThreadQueue = ThreadedKernel.scheduler.newThreadQueue(true);
+	{
+		boolean intStatus = Machine.interrupt().disable();
+		joinThreadQueue.acquire(this);
+		Machine.interrupt().restore(intStatus);
+	}
     
     /**
      * Unique identifer for this thread. Used to deterministically compare
