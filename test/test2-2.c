@@ -15,7 +15,7 @@ int main()
 	for(i = 0; i < 10; i++)
 		printf("233");
 	if(child2 >= 0)
-		ret2 = join(child2 , &status);
+		ret2 = join(child2 + 10 , &status);
 	if(ret2 == -1)
 		printf("Failed gracefully!\n");
 	child3 = exec(name3, 1, &name3);
@@ -28,5 +28,7 @@ int main()
 	if(child1 >= 0 && child3 >= 0 && child1 != child3)
 		printf("Different pids!\n");
 	child4 = exec(name4, 1, &name4);	//we should see only one line of "23333.." stuff!
+	join(child4 , &status);
+	return 0;
 }
 

@@ -42,10 +42,46 @@ public class UserProcess {
     	childExitStatusLock = new Lock();
     	joinLock = new Lock();
     	joinCond = new Condition(joinLock);
+    	childpidLock = new Lock();
     	
     	files = new OpenFile[numFileDescriptors];
-    	files[0] = UserKernel.console.openForReading();
-    	files[1] = UserKernel.console.openForWriting();
+    	
+    	stdin = UserKernel.console.openForReading();
+    	stdout = UserKernel.console.openForWriting();
+    	
+    	files[0] = stdin;
+    	files[1] = stdout;
+    	
+    	for (int i = 2; i < numFileDescriptors; i++)
+    		files[i] = null;
+    }
+    
+    public UserProcess(UserProcess parentProc) {
+    	UserKernel.newPIDLock.acquire();
+    	pid = UserKernel.newPID;
+    	UserKernel.newPID++;
+    	UserKernel.newPIDLock.release();
+    	
+    	UserKernel.processes.put(pid , this);
+    	
+    	parent = parentProc;
+    	childpid = new HashSet<Integer>();
+    	childExitStatus = new HashMap<Integer , Integer>();
+    	joinpid = -1;
+    	
+    	childExitStatusLock = new Lock();
+    	joinLock = new Lock();
+    	joinCond = new Condition(joinLock);
+    	childpidLock = new Lock();
+    	
+    	files = new OpenFile[numFileDescriptors];
+    	
+    	stdin = parentProc.stdin;
+    	stdout = parentProc.stdout;
+    	
+    	files[0] = stdin;
+    	files[1] = stdout;
+    	
     	for (int i = 2; i < numFileDescriptors; i++)
     		files[i] = null;
     }
@@ -398,9 +434,16 @@ public class UserProcess {
      */
     protected void unloadSections() {
     	UserKernel.memoryLock.acquire();
+    	if (pageTable == null) {
+    		UserKernel.memoryLock.release();
+    		return;
+    	}
+    		
     	for (int i = 0; i < pageTable.length; i++) {
-    		if (pageTable[i] != null && pageTable[i].valid)
+    		if (pageTable[i] != null && pageTable[i].valid) {
     			UserKernel.freePhysPages.add(pageTable[i].ppn);
+    			pageTable[i] = null;
+    		}
     	}
     	UserKernel.memoryLock.release();
     }
@@ -444,11 +487,6 @@ public class UserProcess {
     		handleClose(i);
     	unloadSections();
     	coff.close();
-    	for (Integer pid: childpid) {
-    		UserProcess child = UserKernel.processes.get(pid);
-    		if (child != null)
-    			child.parent = null;
-    	}
     	
     	if (parent != null) {
     		parent.childExitStatusLock.acquire();
@@ -501,10 +539,16 @@ public class UserProcess {
 	    			return -1;
 	    	}
 	    	
-	    	UserProcess childProc = newUserProcess();
+	    	UserProcess childProc = new UserProcess(this);
+	    	/*
 	    	childProc.parent = this;
-	    	
+	    	childProc.files[0] = this.files[0];
+	    	childProc.files[1] = this.files[1];
+	    	*/
+	    	childpidLock.acquire();
 	    	childpid.add(childProc.pid);
+	    	childpidLock.release();
+	    	
 	    	if (!childProc.execute(exec , argv)) {
 	    		childProc.handleClose(0);
 	    		childProc.handleClose(1);
@@ -532,10 +576,12 @@ public class UserProcess {
         	}
         	childExitStatusLock.release();
         	int status = childExitStatus.get(joinpid);
-        	if (status == -1)
+        	if (status == processorExceptionStatus ||
+        		status == unknownExceptionStatus)
         		return 0;
         	else {
-        		writeVirtualMemory(statusAddr , Lib.bytesFromInt(status));
+        		if (writeVirtualMemory(statusAddr , Lib.bytesFromInt(status)) != 4)
+        			return 0;
         		return 1;
         	}
     	}
@@ -697,8 +743,8 @@ public class UserProcess {
         				UserKernel.fileSystem.remove(name);
         			}
         		}
-        		
-        		files[fd].close();
+        		if (this.parent == null || fd >= 2)
+        			files[fd].close();
         		files[fd] = null;
         		return 0;
         	}
@@ -827,10 +873,23 @@ public class UserProcess {
 	    processor.writeRegister(Processor.regV0, result);
 	    processor.advancePC();
 	    break;
-
+		
+	case Processor.exceptionAddressError:
+	case Processor.exceptionBusError:
+	case Processor.exceptionIllegalInstruction:
+	case Processor.exceptionOverflow:
+	case Processor.exceptionPageFault:
+	case Processor.exceptionReadOnly:
+	case Processor.exceptionTLBMiss:
+		handleExit(processorExceptionStatus);
+		break;
+		
 	default:
 	    Lib.debug(dbgProcess, "Unexpected exception: " +
 		      Processor.exceptionNames[cause]);
+	    
+	    handleExit(unknownExceptionStatus);
+	    
 	    Lib.assertNotReached("Unexpected exception");
 	}
     }
@@ -859,6 +918,7 @@ public class UserProcess {
     
     protected final int numFileDescriptors = 16;
     protected OpenFile[] files;
+    protected OpenFile stdin , stdout;
     
     private int pid;
     private UserProcess parent;
@@ -866,7 +926,11 @@ public class UserProcess {
     private HashMap<Integer , Integer> childExitStatus;
     private int joinpid;
     
+    private Lock childpidLock;
     private Lock childExitStatusLock;
     private Lock joinLock;
     private Condition joinCond;
+    
+    protected static final int processorExceptionStatus = -23;
+    protected static final int unknownExceptionStatus = -233;
 }

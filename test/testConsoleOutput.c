@@ -1,7 +1,5 @@
 #include "syscall.h"
 
-char buf[1024];
-
 int main()
 {
 	int i , j;
@@ -11,5 +9,6 @@ int main()
 			printf("%d " , i + j);
 		printf("\n");
 	}
+	close(1);
 	return 0;
 }

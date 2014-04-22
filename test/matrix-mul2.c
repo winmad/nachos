@@ -18,7 +18,7 @@ int main()
 		for(j = 0; j < N; j++)
 			for(k = 0; k < N; k++)
 				c[i][j] += a[i][k] * b[k][j];
-	return 0;
+	return c[0][0];
 }
 
 
