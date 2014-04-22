@@ -705,7 +705,11 @@ public class UserProcess {
     				if (sizeRead == 0) {
     					return -1;
     				}
+    				
+    				UserKernel.consoleOutputLock.acquire();
     				sizeWritten = file.write(writeBuf , 0 , sizeRead);
+    				UserKernel.consoleOutputLock.release();
+    				
     				if (sizeWritten != sizeRead) {
     					return -1;
     					//return totSizeWritten + sizeWritten;

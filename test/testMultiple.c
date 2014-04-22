@@ -7,15 +7,15 @@ int main()
 	char *name = "testConsoleOutput.coff";
 	for (i = 0; i < 10; i++)
 	{
-		printf("====run child %d====\n" , i);
+		//printf("====run child %d====\n" , i);
 		child[i] = exec(name , 1 , &name);
-		printf("====================\n");
+		//printf("====================\n");
 	}
 	for (i = 0; i < 10; i++) 
 	{
-		if (join(child[i] , &status) != 1) 
+		if (join(child[i] , &status) == 1) 
 		{
-			printf("error join, status = %d\n" , status);
+			printf("child %d joined successfully\n" , i);
 		}
 	}
 	return 0;
